@@ -145,10 +145,9 @@ hipError_t ihipModuleLaunchKernel(hipFunction_t f, uint32_t globalWorkSizeX,
         int deviceId = ctx->getDevice()->_deviceId;
         ihipDevice_t* currentDevice = ihipGetDevice(deviceId);
         hsa_agent_t gpuAgent = (hsa_agent_t)currentDevice->_hsaAgent;
+        vector<char>kernargs;
 
-        void* config[5] = {0};
-        size_t kernArgSize;
-
+<<<<<<< HEAD
         std::vector<char> tmp{};
         if (kernelParams) {
             if (extra) return hipErrorInvalidValue;
@@ -173,6 +172,20 @@ hipError_t ihipModuleLaunchKernel(hipFunction_t f, uint32_t globalWorkSizeX,
             if (config[0] == HIP_LAUNCH_PARAM_BUFFER_POINTER &&
                 config[2] == HIP_LAUNCH_PARAM_BUFFER_SIZE && config[4] == HIP_LAUNCH_PARAM_END) {
                 kernArgSize = *(size_t*)(config[3]);
+=======
+        if (kernelParams != NULL) {
+            std::string name = f->_name;
+            struct ihipKernArgInfo pl = kernelArguments[name];
+            for (int i = 0; i < pl.Size.size(); i++)
+                kernargs.push_back(*(static_cast<char*>(kernelParams[i])));
+        } else if (extra != NULL) {
+            if (extra[0] == HIP_LAUNCH_PARAM_BUFFER_POINTER &&
+                extra[2] == HIP_LAUNCH_PARAM_BUFFER_SIZE && extra[4] == HIP_LAUNCH_PARAM_END) {
+              auto args = (char *)extra[1];
+              size_t argSize = *(size_t*)(extra[3]);
+              for (int i = 0; i < argSize; i++)
+                  kernargs.push_back(args[i]);
+>>>>>>> Kernel argument extraction code clean up.
             } else {
                 return hipErrorNotInitialized;
             }
@@ -230,7 +243,8 @@ hipError_t ihipModuleLaunchKernel(hipFunction_t f, uint32_t globalWorkSizeX,
 
         hc::completion_future cf;
 
-        lp.av->dispatch_hsa_kernel(&aql, config[1] /* kernarg*/, kernArgSize,
+        // TODO - append implicit kernargs.
+        lp.av->dispatch_hsa_kernel(&aql, kernargs.data(), kernargs.size(),
                                    (startEvent || stopEvent) ? &cf : nullptr
 #if (__hcc_workweek__ > 17312)
                                    ,
@@ -246,6 +260,10 @@ hipError_t ihipModuleLaunchKernel(hipFunction_t f, uint32_t globalWorkSizeX,
             stopEvent->attachToCompletionFuture(&cf, hStream, hipEventTypeStopCommand);
         }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> Kernel argument extraction code clean up.
         ihipPostLaunchKernel(f->_name.c_str(), hStream, lp);
     }
 
